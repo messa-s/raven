@@ -1,0 +1,66 @@
+
+name: Build Raven
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build on Arch Linux
+    runs-on: ubuntu-latest
+
+    container:
+      image: archlinux:latest
+
+    steps:
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --needed --noconfirm \
+            base-devel \
+            git \
+            cmake \
+            gcc \
+            python \
+            pkgconf \
+            mingw-w64-gcc \
+            wayland \
+            wayland-protocols \
+            libxkbcommon \
+            pixman \
+            freetype2 \
+            vulkan-headers \
+            vulkan-icd-loader \
+            mesa \
+            libpng
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Configure CMake
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo
+
+      - name: Build Raven
+        run: |
+          cmake --build build --parallel 2
+
+      - name: Show build output
+        run: |
+          ls -lah build/native/
+          file build/native/raven
+
+      - name: Upload build folder
+        uses: actions/upload-artifact@v4
+        with:
+          name: raven-arch-linux-${{ github.sha }}
+          path: build/
+          if-no-files-found: error
+          retention-days: 30
